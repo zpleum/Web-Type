@@ -1499,7 +1499,7 @@ export const TAILWIND_SNIPPETS: Record<Difficulty, string[]> = {
     "bg-brand text-brand-foreground",
     "text-(length:--text-base)",
     "bg-(--surface)",
-    "@[container]:flex",
+    "@md:flex",
     "data-[state=open]:animate-in",
     "has-[:focus-visible]:ring-2",
     "grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]",
