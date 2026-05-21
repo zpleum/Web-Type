@@ -21,8 +21,6 @@ import SegmentedControl from "./SegmentedControl";
 import PageHeader from "./PageHeader";
 import type { Page } from "./Navbar";
 
-// 💡 ถอดค่าคงที่ออกไป แล้วเปลี่ยนมาใช้ State ข้างใน Component แทนครับ
-
 function calcStats(typed: string, text: string, elapsedMs: number) {
   const secs = elapsedMs / 1000;
   const correct = [...typed].filter((c, i) => c === text[i]).length;
@@ -72,10 +70,10 @@ const DIFF_OPTIONS = [
 ];
 
 const COUNT_OPTIONS = [
-  { id: 5, label: "5" },
-  { id: 10, label: "10" },
-  { id: 20, label: "20" },
-  { id: 30, label: "30" },
+  { id: "5", label: "5" },
+  { id: "10", label: "10" },
+  { id: "20", label: "20" },
+  { id: "30", label: "30" },
 ];
 
 export default function TestPage({
@@ -289,7 +287,7 @@ export default function TestPage({
           <p className="section-label mb-2">Snippets Count</p>
           <SegmentedControl
             options={COUNT_OPTIONS}
-            value={snippetCount}
+            value={snippetCount.toString()}
             onChange={(val) => setSnippetCount(Number(val))}
             layoutId="test-count"
             variant="grid2"
