@@ -21,7 +21,7 @@ import SegmentedControl from "./SegmentedControl";
 import PageHeader from "./PageHeader";
 import type { Page } from "./Navbar";
 
-const SNIPPET_COUNT = 5;
+// 💡 ถอดค่าคงที่ออกไป แล้วเปลี่ยนมาใช้ State ข้างใน Component แทนครับ
 
 function calcStats(typed: string, text: string, elapsedMs: number) {
   const secs = elapsedMs / 1000;
@@ -71,6 +71,13 @@ const DIFF_OPTIONS = [
   { id: "hard" as Difficulty, label: "Hard", icon: <FiCircle className="w-3 h-3 text-rose-400" /> },
 ];
 
+const COUNT_OPTIONS = [
+  { id: 5, label: "5" },
+  { id: 10, label: "10" },
+  { id: 20, label: "20" },
+  { id: 30, label: "30" },
+];
+
 export default function TestPage({
   initLang,
   initDiff,
@@ -82,11 +89,13 @@ export default function TestPage({
 }) {
   const [lang, setLang] = useState<Language>(initLang);
   const [diff, setDiff] = useState<Difficulty>(initDiff);
+  const [snippetCount, setSnippetCount] = useState<number>(5);
 
   useEffect(() => {
     setLang(initLang);
     setDiff(initDiff);
   }, [initLang, initDiff]);
+  
   const [snippets, setSnippets] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
   const [typed, setTyped] = useState("");
@@ -117,8 +126,8 @@ export default function TestPage({
     }, 600);
   }, []);
 
-  const initSession = useCallback((l: Language, d: Difficulty) => {
-    setSnippets(shuffle(SNIPPETS[l][d]).slice(0, SNIPPET_COUNT));
+  const initSession = useCallback((l: Language, d: Difficulty, count: number) => {
+    setSnippets(shuffle(SNIPPETS[l][d]).slice(0, count));
     setIdx(0); setTyped(""); setElapsed(0);
     setStarted(false); setDone(false);
     setResults([]); setSessionDone(false);
@@ -128,7 +137,9 @@ export default function TestPage({
     focusInput();
   }, [focusInput]);
 
-  useEffect(() => { initSession(lang, diff); }, [lang, diff, initSession]);
+  useEffect(() => { 
+    initSession(lang, diff, snippetCount); 
+  }, [lang, diff, snippetCount, initSession]);
 
   const finishSnippet = useCallback(() => {
     clearInterval(timerRef.current!);
@@ -141,7 +152,7 @@ export default function TestPage({
   }, [typed, currentText]);
 
   const advance = useCallback(() => {
-    if (idx >= SNIPPET_COUNT - 1) {
+    if (idx >= snippetCount - 1) {
       setSessionDone(true);
       setWaitingForNext(false);
     } else {
@@ -152,7 +163,7 @@ export default function TestPage({
       clearInterval(timerRef.current!);
       focusInput();
     }
-  }, [idx, focusInput]);
+  }, [idx, snippetCount, focusInput]);
 
   // Auto-advance after snippet is done with active focus handling
   useEffect(() => {
@@ -274,6 +285,16 @@ export default function TestPage({
             variant="stack"
           />
         </div>
+        <div>
+          <p className="section-label mb-2">Snippets Count</p>
+          <SegmentedControl
+            options={COUNT_OPTIONS}
+            value={snippetCount}
+            onChange={(val) => setSnippetCount(Number(val))}
+            layoutId="test-count"
+            variant="grid2"
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border">
           <LangBadge lang={lang} />
           <DiffBadge diff={diff} />
@@ -288,7 +309,7 @@ export default function TestPage({
         <div className="card-glass rounded-2xl p-3">
           <p className="section-label mb-2">Session</p>
           <div className="flex gap-1.5" aria-label="Session progress">
-            {Array.from({ length: SNIPPET_COUNT }).map((_, i) => (
+            {Array.from({ length: snippetCount }).map((_, i) => (
               <div
                 key={i}
                 className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
@@ -298,7 +319,7 @@ export default function TestPage({
             ))}
           </div>
           <p className="text-[11px] text-muted mt-2 tabular-nums">
-            Snippet {idx + 1} / {SNIPPET_COUNT}
+            Snippet {idx + 1} / {snippetCount}
           </p>
         </div>
       )}
@@ -334,177 +355,177 @@ export default function TestPage({
         {/* Snippet center — first on mobile */}
         <div className="order-1 lg:order-2 min-w-0 flex flex-col items-center">
           <div className="w-full max-w-2xl mx-auto">
-      <AnimatePresence mode="wait">
-        {!sessionDone ? (
-          <motion.div
-            key={`snippet-${idx}`}
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className={`card-glass rounded-2xl p-4 sm:p-6 mb-4 ring-1 ${LANG_ACCENT[lang]}`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium text-muted">
-                Snippet <span className="text-foreground tabular-nums">{idx + 1}</span>
-                <span className="text-muted"> / {SNIPPET_COUNT}</span>
-              </span>
-              <motion.div
-                animate={
-                  done
-                    ? { backgroundColor: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.3)" }
-                    : started
-                      ? { backgroundColor: "rgba(139,124,240,0.12)", borderColor: "rgba(139,124,240,0.3)" }
-                      : {}
-                }
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-border"
-              >
-                {done ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                    <FiCheckCircle className="w-3.5 h-3.5" />
-                    Complete
-                  </span>
-                ) : started ? (
-                  <span className="inline-flex items-center gap-1.5 text-violet-300">
-                    <FiClock className="w-3.5 h-3.5" />
-                    Typing
-                  </span>
-                ) : (
-                  <span className="text-muted">Ready</span>
-                )}
-              </motion.div>
-            </div>
-
-            <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden mb-5">
-              <motion.div
-                className={`h-full rounded-full ${PROGRESS_BAR[lang]}`}
-                animate={{ width: `${Math.min(progress, 100)}%` }}
-                transition={{ duration: 0.1 }}
-              />
-            </div>
-
-            <SnippetDisplay text={currentText} typed={typed} />
-
-            <textarea
-              ref={inputRef}
-              value={typed}
-              onChange={handleInput}
-              disabled={done}
-              placeholder="Start typing here…"
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              className={`w-full font-mono text-sm p-4 input-field rounded-xl placeholder:text-muted resize-none min-h-[100px] leading-relaxed transition-all outline-none focus:ring-2 disabled:opacity-40 ${INPUT_FOCUS[lang]}`}
-            />
-
-            {/* Done hint */}
-            <AnimatePresence>
-              {done && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-xs text-violet-400 text-center mt-2 font-medium"
+            <AnimatePresence mode="wait">
+              {!sessionDone ? (
+                <motion.div
+                  key={`snippet-${idx}`}
+                  initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className={`card-glass rounded-2xl p-4 sm:p-6 mb-4 ring-1 ${LANG_ACCENT[lang]}`}
                 >
-                  Press <kbd className="px-2 py-0.5 rounded-md bg-surface-2 border border-border font-mono text-xs text-foreground">Space</kbd> or wait to advance
-                </motion.p>
-              )}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-medium text-muted">
+                      Snippet <span className="text-foreground tabular-nums">{idx + 1}</span>
+                      <span className="text-muted"> / {snippetCount}</span>
+                    </span>
+                    <motion.div
+                      animate={
+                        done
+                          ? { backgroundColor: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.3)" }
+                          : started
+                            ? { backgroundColor: "rgba(139,124,240,0.12)", borderColor: "rgba(139,124,240,0.3)" }
+                            : {}
+                      }
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border border-border"
+                    >
+                      {done ? (
+                        <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                          <FiCheckCircle className="w-3.5 h-3.5" />
+                          Complete
+                        </span>
+                      ) : started ? (
+                        <span className="inline-flex items-center gap-1.5 text-violet-300">
+                          <FiClock className="w-3.5 h-3.5" />
+                          Typing
+                        </span>
+                      ) : (
+                        <span className="text-muted">Ready</span>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden mb-5">
+                    <motion.div
+                      className={`h-full rounded-full ${PROGRESS_BAR[lang]}`}
+                      animate={{ width: `${Math.min(progress, 100)}%` }}
+                      transition={{ duration: 0.1 }}
+                    />
+                  </div>
+
+                  <SnippetDisplay text={currentText} typed={typed} langLabel={`${lang.toUpperCase()} - ${diff}`} />
+
+                  <textarea
+                    ref={inputRef}
+                    value={typed}
+                    onChange={handleInput}
+                    disabled={done}
+                    placeholder="Start typing here…"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className={`w-full font-mono text-sm p-4 input-field rounded-xl placeholder:text-muted resize-none min-h-[100px] leading-relaxed transition-all outline-none focus:ring-2 disabled:opacity-40 ${INPUT_FOCUS[lang]}`}
+                  />
+
+                  {/* Done hint */}
+                  <AnimatePresence>
+                    {done && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-xs text-violet-400 text-center mt-2 font-medium"
+                      >
+                        Press <kbd className="px-2 py-0.5 rounded-md bg-surface-2 border border-border font-mono text-xs text-foreground">Space</kbd> or wait to advance
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      onClick={() => { if (done) advance(); else { finishSnippet(); setTimeout(advance, 150); } }}
+                      className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold"
+                    >
+                      <FiArrowRight className="w-4 h-4" />
+                      Next
+                      <span className="hidden sm:inline text-violet-300/60 text-xs font-normal ml-0.5">[Space]</span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => initSession(lang, diff, snippetCount)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-foreground text-sm font-medium transition-colors border border-border"
+                    >
+                      <FiRefreshCcw className="w-4 h-4" />
+                      Reset
+                    </motion.button>
+                    <span className="ml-auto text-xs text-muted tabular-nums">
+                      Errors <span className="text-rose-400 font-semibold">{errorCount}</span>
+                    </span>
+                  </div>
+                </motion.div>
+              ) : null}
             </AnimatePresence>
 
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border">
-              <motion.button
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                onClick={() => { if (done) advance(); else { finishSnippet(); setTimeout(advance, 150); } }}
-                className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold"
-              >
-                <FiArrowRight className="w-4 h-4" />
-                Next
-                <span className="hidden sm:inline text-violet-300/60 text-xs font-normal ml-0.5">[Space]</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => initSession(lang, diff)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-foreground text-sm font-medium transition-colors border border-border"
-              >
-                <FiRefreshCcw className="w-4 h-4" />
-                Reset
-              </motion.button>
-              <span className="ml-auto text-xs text-muted tabular-nums">
-                Errors <span className="text-rose-400 font-semibold">{errorCount}</span>
-              </span>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      {/* Session result */}
-      <AnimatePresence>
-        {sessionDone && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 22 }}
-            className="card-glass rounded-2xl p-5 sm:p-7"
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <motion.div
-                initial={{ rotate: -20, scale: 0 }} animate={{ rotate: 0, scale: 1 }}
-                transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-lg sm:text-xl"
-              >
-                <FiCheckCircle className="w-5 h-5 text-amber-400" />
-              </motion.div>
-              <div>
-                <p className="text-sm sm:text-base font-semibold text-foreground">Session Complete!</p>
-                <p className="text-xs sm:text-sm text-muted">{rank.msg}</p>
-              </div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium mb-5 ${rank.bg}`}
-            >
-              <rank.icon className="w-4 h-4" />
-              <span className={rank.color}>{rank.label}</span>
-              <LangBadge lang={lang} />
-              <DiffBadge diff={diff} />
-            </motion.div>
-
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
-              {[{ label: "Avg WPM", value: avgWpm, unit: "" }, { label: "Avg Accuracy", value: avgAcc, unit: "%" }, { label: "Total Time", value: formatDuration(totalTime), unit: "" }].map((m, i) => (
+            {/* Session result */}
+            <AnimatePresence>
+              {sessionDone && (
                 <motion.div
-                  key={m.label}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + i * 0.08 }}
-                  className="bg-surface-2/60 border border-border rounded-xl p-3 sm:p-4 text-center"
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 22 }}
+                  className="card-glass rounded-2xl p-5 sm:p-7"
                 >
-                  <p className="text-2xl sm:text-3xl font-bold text-violet-400 tabular-nums">{m.value}{m.unit}</p>
-                  <p className="text-xs text-muted mt-1">{m.label}</p>
-                </motion.div>
-              ))}
-            </div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <motion.div
+                      initial={{ rotate: -20, scale: 0 }} animate={{ rotate: 0, scale: 1 }}
+                      transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-lg sm:text-xl"
+                    >
+                      <FiCheckCircle className="w-5 h-5 text-amber-400" />
+                    </motion.div>
+                    <div>
+                      <p className="text-sm sm:text-base font-semibold text-foreground">Session Complete!</p>
+                      <p className="text-xs sm:text-sm text-muted">{rank.msg}</p>
+                    </div>
+                  </div>
 
-            <div className="flex gap-2">
-              <motion.button
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => initSession(lang, diff)}
-                className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
-              >
-                <FiRefreshCcw className="w-4 h-4" />
-                Play again
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                onClick={() => onNav("leaderboard")}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-2 border border-border text-foreground font-semibold text-sm hover:bg-surface-3 transition-colors"
-              >
-                <MdOutlineLeaderboard className="w-4 h-4" />
-                Leaderboard
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-medium mb-5 ${rank.bg}`}
+                  >
+                    <rank.icon className="w-4 h-4" />
+                    <span className={rank.color}>{rank.label}</span>
+                    <LangBadge lang={lang} />
+                    <DiffBadge diff={diff} />
+                  </motion.div>
+
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
+                    {[{ label: "Avg WPM", value: avgWpm, unit: "" }, { label: "Avg Accuracy", value: avgAcc, unit: "%" }, { label: "Total Time", value: formatDuration(totalTime), unit: "" }].map((m, i) => (
+                      <motion.div
+                        key={m.label}
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 + i * 0.08 }}
+                        className="bg-surface-2/60 border border-border rounded-xl p-3 sm:p-4 text-center"
+                      >
+                        <p className="text-2xl sm:text-3xl font-bold text-violet-400 tabular-nums">{m.value}{m.unit}</p>
+                        <p className="text-xs text-muted mt-1">{m.label}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => initSession(lang, diff, snippetCount)}
+                      className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
+                    >
+                      <FiRefreshCcw className="w-4 h-4" />
+                      Play again
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      onClick={() => onNav("leaderboard")}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-2 border border-border text-foreground font-semibold text-sm hover:bg-surface-3 transition-colors"
+                    >
+                      <MdOutlineLeaderboard className="w-4 h-4" />
+                      Leaderboard
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

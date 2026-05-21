@@ -5,9 +5,10 @@ import { FiCode } from "react-icons/fi";
 interface Props {
   text: string;
   typed: string;
+  langLabel?: string;
 }
 
-export default function SnippetDisplay({ text, typed }: Props) {
+export default function SnippetDisplay({ text, typed, langLabel = "Target snippet" }: Props) {
   const progress = text.length > 0 ? Math.round((typed.length / text.length) * 100) : 0;
 
   return (
@@ -19,7 +20,7 @@ export default function SnippetDisplay({ text, typed }: Props) {
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
           <span className="ml-2 flex items-center gap-1.5 text-[11px] font-medium text-muted">
             <FiCode className="w-3 h-3" />
-            Target snippet
+            {langLabel}
           </span>
         </div>
         <span className="text-[10px] font-medium text-muted tabular-nums">{progress}%</span>
@@ -45,7 +46,7 @@ export default function SnippetDisplay({ text, typed }: Props) {
             return (
               <span key={i} className="cursor-blink text-muted">
                 {ch}
-              </span>
+              </span >
             );
           }
           return (
