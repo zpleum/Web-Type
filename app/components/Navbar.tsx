@@ -77,7 +77,7 @@ export default function Navbar({ current, onNav }: { current: Page; onNav: (p: P
           className="flex items-center gap-2 text-[17px] font-semibold text-foreground"
         >
           <span className="relative w-9 h-9 rounded-xl bg-white border border-border flex items-center justify-center overflow-hidden shadow-sm shrink-0">
-            <Image src="/logo.png" alt="" width={28} height={28} className="object-contain dark:invert" priority />
+            <Image src="/logo.png" alt="" width={28} height={28} className="object-contain" priority />
           </span>
           Web<span className="text-violet-500 dark:text-violet-400">Type</span>
         </motion.button>

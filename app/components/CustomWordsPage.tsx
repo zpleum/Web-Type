@@ -9,6 +9,7 @@ import { processTypingInput } from "../lib/editorAssist";
 import StatCard from "./StatCard";
 import EditorAssistSettings from "./EditorAssistSettings";
 import SnippetDisplay from "./SnippetDisplay";
+import RealtimePreview from "./RealtimePreview";
 import PageHeader from "./PageHeader";
 import type { Page } from "./Navbar";
 
@@ -74,8 +75,10 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
 
   const finishLine = useCallback(() => {
     clearInterval(timerRef.current!);
-    const elapsed2 = Date.now() - startRef.current;
+    
+    const elapsed2 = started ? (Date.now() - startRef.current) : 0;
     setElapsed(elapsed2);
+    
     const s = calcStats(typed, currentText, elapsed2);
     const err = [...typed].filter((c, i) => c !== currentText[i]).length;
     setSessionStats((prev) => [...prev, { wpm: s.wpm, acc: s.acc, secs: s.secs, errors: err }]);
@@ -91,7 +94,7 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
         focusInput();
       }, 800);
     }
-  }, [typed, currentText, currentIdx, lines.length, focusInput]);
+  }, [typed, currentText, currentIdx, lines.length, started, focusInput]);
 
   useEffect(() => {
     if (mode !== "typing" || started === false) return;
@@ -143,7 +146,6 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
       const start = el.selectionStart;
       const end = el.selectionEnd;
 
-      // Find the expected whitespace in the target text at the cursor position
       const targetRest = currentText.slice(start);
       let ws = "";
       let i = 0;
@@ -152,11 +154,9 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
         i++;
       }
 
-      // If target has indentation space/tab, insert it. Otherwise insert 4 spaces.
       const insertText = ws.length > 0 ? ws : "    ";
       const newVal = val.slice(0, start) + insertText + val.slice(end);
 
-      // Start timer if first keystroke
       if (!started && newVal.length > 0) {
         setStarted(true);
         startRef.current = Date.now();
@@ -183,7 +183,8 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
   const avgWpm = sessionStats.length > 0 ? Math.round(sessionStats.reduce((a, b) => a + b.wpm, 0) / sessionStats.length) : 0;
   const avgAcc = sessionStats.length > 0 ? Math.round(sessionStats.reduce((a, b) => a + b.acc, 0) / sessionStats.length) : 0;
   const totalErrors = sessionStats.reduce((a, b) => a + b.errors, 0);
-  const totalTime = Math.round(sessionStats.reduce((a, b) => a + b.secs, 0));
+  
+  const totalTime = Math.max(0, Math.round(sessionStats.reduce((a, b) => a + (b.secs > 100000 ? 0 : b.secs), 0)));
 
   useEffect(() => {
     if (mode !== "done" || sessionStats.length === 0) return;
@@ -339,6 +340,8 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
                   className="w-full font-mono text-sm p-4 input-field rounded-xl placeholder:text-muted resize-none min-h-[100px] leading-relaxed transition-all outline-none focus:ring-2 focus:ring-violet-500/25 focus:border-violet-500/40 border border-border mt-4"
                 />
 
+                <RealtimePreview typed={typed} lang={computedLang} />
+
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                   <span className="text-xs text-muted">
                     Errors <span className="text-rose-400 font-semibold">{errorCount}</span>
@@ -443,6 +446,13 @@ export default function CustomWordsPage({ onNav }: { onNav: (p: Page) => void })
                       <p className="font-semibold text-foreground tabular-nums">{m.value}{m.unit || ""}</p>
                     </motion.div>
                   ))}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-border mb-6">
+                <p className="text-xs font-semibold text-muted mb-2">Final Code Output Preview</p>
+                <div className="p-1 rounded-xl bg-surface-1/50">
+                  <RealtimePreview typed={typed} lang={computedLang} />
                 </div>
               </div>
 

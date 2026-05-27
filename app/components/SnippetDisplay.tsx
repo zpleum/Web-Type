@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { FiCode } from "react-icons/fi";
+import { useRef, useEffect } from "react";
 
 interface Props {
   text: string;
@@ -19,6 +20,51 @@ export default function SnippetDisplay({ text, typed }: Props) {
     cur = newlineIdx + 1;                      // next line starts after \n
     return { content, start, newlineIdx };
   });
+
+  const activeCharRef = useRef<HTMLSpanElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevLineIdxRef = useRef<number>(-1);
+
+  // Find the active line index
+  const activeLineIdx = lines.findIndex(
+    (line) => typed.length >= line.start && typed.length <= line.newlineIdx
+  );
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // 1. If we moved to a new line, auto scroll back to the start (scrollLeft = 0)
+    if (activeLineIdx !== prevLineIdxRef.current) {
+      container.scrollTo({ left: 0, behavior: "smooth" });
+      prevLineIdxRef.current = activeLineIdx;
+      return;
+    }
+
+    // 2. Otherwise, auto scroll to current word / cursor character
+    const activeChar = activeCharRef.current;
+    if (!activeChar) return;
+
+    const charRect = activeChar.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Check position of character relative to container viewport
+    const relativeLeft = charRect.left - containerRect.left;
+    const relativeRight = charRect.right - containerRect.left;
+    const padding = 80; // keep 80px space from the edge for readability
+
+    if (relativeRight > containerRect.width - padding) {
+      container.scrollTo({
+        left: container.scrollLeft + (relativeRight - containerRect.width + padding),
+        behavior: "auto"
+      });
+    } else if (relativeLeft < padding) {
+      container.scrollTo({
+        left: Math.max(0, container.scrollLeft + relativeLeft - padding),
+        behavior: "auto"
+      });
+    }
+  }, [typed.length, activeLineIdx]);
 
   /** Render a single visible character at global index `idx`. */
   const renderChar = (char: string, idx: number) => {
@@ -43,7 +89,7 @@ export default function SnippetDisplay({ text, typed }: Props) {
     }
     if (idx === typed.length) {
       return (
-        <span key={idx} className="cursor-blink text-muted">
+        <span key={idx} ref={activeCharRef} className="cursor-blink text-muted">
           {ch}
         </span>
       );
@@ -123,7 +169,7 @@ export default function SnippetDisplay({ text, typed }: Props) {
         </div>
 
         {/* ── Code content ── */}
-        <div className="flex-1 min-w-0 overflow-x-auto py-4 px-4">
+        <div ref={scrollContainerRef} className="flex-1 min-w-0 overflow-x-auto py-4 px-4">
           {lines.map((line, lineIdx) => (
             <div key={lineIdx} className="leading-relaxed whitespace-pre">
               {/* Characters on this line */}

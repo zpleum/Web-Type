@@ -314,8 +314,11 @@ Object.assign(EXTRA.tailwind, {
     "divide-y", "divide-border", "from-primary", "to-primary/60", "bg-gradient-to-r",
   ],
   hard: [
-    "@[container]:flex", "data-[state=open]:animate-in", "has-[:focus-visible]:ring-2",
-    "grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]", "text-[length:var(--step-0)]",
+    "@[40rem]:flex",
+    "data-[state=open]:animate-in", 
+    "has-[:focus-visible]:ring-2",
+    "grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]", 
+    "text-[length:var(--step-0)]",
   ],
 });
 

@@ -6,15 +6,12 @@ import { MdOutlineLeaderboard } from "react-icons/md";
 import type { Difficulty, Language } from "../lib/types";
 import { SNIPPETS, LANGUAGES, LANG_LABELS, LANG_LABELS_SHORT, shuffle, getRank } from "../lib/snippets";
 import { pushLeaderboardEntry, formatDuration } from "../lib/leaderboard";
-import {
-  loadEditorSettings,
-  saveEditorSettings,
-  type EditorSettings,
-} from "../lib/editorSettings";
+import { loadEditorSettings, saveEditorSettings, type EditorSettings } from "../lib/editorSettings";
 import { processTypingInput } from "../lib/editorAssist";
 import StatCard from "./StatCard";
 import EditorAssistSettings from "./EditorAssistSettings";
 import SnippetDisplay from "./SnippetDisplay";
+import RealtimePreview from "./RealtimePreview";
 import DiffBadge from "./DiffBadge";
 import LangBadge from "./LangBadge";
 import SegmentedControl from "./SegmentedControl";
@@ -24,7 +21,6 @@ import type { Page } from "./Navbar";
 const SNIPPET_COUNT = 5;
 
 function calcStats(typed: string, text: string, elapsedMs: number) {
-  // Use a time floor of 0.5 seconds to avoid unrealistic speed spikes on very short typing tests
   const secs = Math.max(elapsedMs / 1000, 0.5);
   const correct = [...typed].filter((c, i) => c === text[i]).length;
   const cpm = secs > 0 ? Math.round((correct / secs) * 60) : 0;
@@ -109,7 +105,6 @@ export default function TestPage({
   const stats = calcStats(typed, currentText, elapsed);
   const errorCount = [...typed].filter((c, i) => c !== currentText[i]).length;
 
-  // Focus textarea
   const focusInput = useCallback(() => {
     setTimeout(() => {
       if (inputRef.current) {
@@ -133,13 +128,13 @@ export default function TestPage({
 
   const finishSnippet = useCallback(() => {
     clearInterval(timerRef.current!);
-    const elapsed2 = Date.now() - startRef.current;
+    const elapsed2 = started ? (Date.now() - startRef.current) : 0;
     setElapsed(elapsed2);
     setDone(true);
     setWaitingForNext(true);
     const s = calcStats(typed, currentText, elapsed2);
     setResults((r) => [...r, { wpm: s.wpm, acc: s.acc, secs: s.secs }]);
-  }, [typed, currentText]);
+  }, [typed, currentText, started]);
 
   const advance = useCallback(() => {
     if (idx >= SNIPPET_COUNT - 1) {
@@ -155,7 +150,6 @@ export default function TestPage({
     }
   }, [idx, focusInput]);
 
-  // Auto-advance after snippet is done with active focus handling
   useEffect(() => {
     if (!done) return;
     const timer = setTimeout(() => {
@@ -164,7 +158,6 @@ export default function TestPage({
     return () => clearTimeout(timer);
   }, [done, advance]);
 
-  // Spacebar triggers Next when waiting for next (Intercept events securely)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -188,7 +181,6 @@ export default function TestPage({
     }
   }, [typed, currentText, done, finishSnippet]);
 
-  // Restore caret inside auto-closed pairs (React resets selection to end on controlled updates)
   useLayoutEffect(() => {
     const pos = pendingCursorRef.current;
     if (pos === null || !inputRef.current) return;
@@ -197,7 +189,6 @@ export default function TestPage({
     el.setSelectionRange(pos, pos);
   }, [typed]);
 
-  // Keep input focused continuously when active
   useEffect(() => {
     if (!done && !sessionDone && currentText.length > 0) {
       focusInput();
@@ -245,7 +236,6 @@ export default function TestPage({
       const start = el.selectionStart;
       const end = el.selectionEnd;
 
-      // Find the expected whitespace in the target text at the cursor position
       const targetRest = currentText.slice(start);
       let ws = "";
       let i = 0;
@@ -254,11 +244,9 @@ export default function TestPage({
         i++;
       }
 
-      // If target has indentation space/tab, insert it. Otherwise insert 4 spaces.
       const insertText = ws.length > 0 ? ws : "    ";
       const newVal = val.slice(0, start) + insertText + val.slice(end);
 
-      // Start timer if first keystroke
       if (!started && newVal.length > 0) {
         setStarted(true);
         startRef.current = Date.now();
@@ -383,7 +371,6 @@ export default function TestPage({
       />
 
       <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(180px,200px)_minmax(0,1fr)_minmax(180px,200px)] lg:gap-5 xl:gap-6">
-        {/* Snippet center — first on mobile */}
         <div className="order-1 lg:order-2 min-w-0 flex flex-col items-center">
           <div className="w-full max-w-2xl mx-auto">
       <AnimatePresence mode="wait">
@@ -452,7 +439,8 @@ export default function TestPage({
               className={`w-full font-mono text-sm p-4 input-field rounded-xl placeholder:text-muted resize-none min-h-[100px] leading-relaxed transition-all outline-none focus:ring-2 disabled:opacity-40 ${INPUT_FOCUS[lang]}`}
             />
 
-            {/* Done hint */}
+            <RealtimePreview typed={typed} lang={lang} />
+
             <AnimatePresence>
               {done && (
                 <motion.p
@@ -492,7 +480,6 @@ export default function TestPage({
         ) : null}
       </AnimatePresence>
 
-      {/* Session result */}
       <AnimatePresence>
         {sessionDone && (
           <motion.div
@@ -564,6 +551,14 @@ export default function TestPage({
               </div>
             </div>
 
+            {/* 🌟 แสดง RealtimePreview ในหน้า Session Complete อ้างอิงคำขอเดิม */}
+            <div className="mt-4 pt-4 border-t border-border mb-5">
+              <p className="text-xs font-semibold text-muted mb-2">Final Code Output Preview</p>
+              <div className="p-1 rounded-xl bg-surface-1/50">
+                <RealtimePreview typed={typed} lang={lang} />
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <motion.button
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -588,7 +583,6 @@ export default function TestPage({
           </div>
         </div>
 
-        {/* Sidebars — two columns on mobile, flank snippet on desktop */}
         <div className="order-2 lg:order-1 grid grid-cols-2 gap-3 lg:contents">
           <div className="lg:order-1">{leftSidebar}</div>
           <div className="lg:order-3">{rightSidebar}</div>
