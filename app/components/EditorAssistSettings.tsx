@@ -24,6 +24,11 @@ const OPTIONS: { key: SettingKey; label: string; hint: string; htmlOnly?: boolea
     label: "Auto-close brackets",
     hint: "Adds ), ], or } when expected next.",
   },
+  {
+    key: "autoIndent",
+    label: "Auto-indent",
+    hint: "Automatically inserts matching indentation when starting a new line.",
+  },
 ];
 
 export default function EditorAssistSettings({

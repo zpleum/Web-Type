@@ -12,6 +12,17 @@ function normalizeEntry(raw: Record<string, unknown>): LeaderboardEntry | null {
   const diff = raw.diff;
   if (diff !== "easy" && diff !== "medium" && diff !== "hard") return null;
   const lang = isLanguage(raw.lang) ? raw.lang : "css";
+
+  let snippetStats: { wpm: number; acc: number; secs: number }[] | undefined = undefined;
+  if (Array.isArray(raw.snippetStats)) {
+    snippetStats = raw.snippetStats.map((item) => {
+      const w = typeof item?.wpm === "number" ? item.wpm : 0;
+      const a = typeof item?.acc === "number" ? item.acc : 100;
+      const s = typeof item?.secs === "number" ? item.secs : 0;
+      return { wpm: w, acc: a, secs: s };
+    });
+  }
+
   return {
     wpm: raw.wpm,
     acc: raw.acc,
@@ -20,6 +31,9 @@ function normalizeEntry(raw: Record<string, unknown>): LeaderboardEntry | null {
     lang,
     date: typeof raw.date === "string" ? raw.date : new Date().toLocaleDateString("th-TH"),
     completedAt: typeof raw.completedAt === "string" ? raw.completedAt : undefined,
+    snippetStats,
+    isCustom: typeof raw.isCustom === "boolean" ? raw.isCustom : undefined,
+    customTitle: typeof raw.customTitle === "string" ? raw.customTitle : undefined,
   };
 }
 
@@ -85,8 +99,13 @@ export function pushLeaderboardEntry(
     date: entry.date ?? now.toLocaleDateString("th-TH"),
     completedAt: entry.completedAt ?? now.toISOString(),
   });
-  lb.sort((a, b) => b.wpm - a.wpm);
-  lb.splice(50);
+  // Sort by date completedAt descending to keep the 200 most recent games
+  lb.sort((a, b) => {
+    const timeA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+    const timeB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+    return timeB - timeA;
+  });
+  lb.splice(200); // Keep up to 200 most recent games
   saveLeaderboard(lb);
 }
 

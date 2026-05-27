@@ -5,10 +5,11 @@ import Image from "next/image";
 import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggle from "./ThemeToggle";
 
-export type Page = "home" | "test" | "leaderboard" | "guide" | "about";
+export type Page = "home" | "test" | "custom-test" | "leaderboard" | "guide" | "about";
 const LINKS: { id: Page; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "test", label: "Test" },
+  { id: "custom-test", label: "Custom Test" },
   { id: "leaderboard", label: "Leaderboard" },
   { id: "guide", label: "Guide" },
   { id: "about", label: "About" },

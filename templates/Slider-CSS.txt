@@ -1,0 +1,29 @@
+.sd {
+    width: 100%;
+    overflow: hidden;
+}
+
+.sd2 {
+    width: 300%;
+    display: flex;
+    animation: slide 10s infinite;
+}
+
+@keyframes slide {
+    0%, 25% {
+        transform: translateX(0);
+    }
+    30%, 55% {
+        transform: translateX(-33.33%);
+    }
+    60%, 85% {
+        transform: translateX(-66.66%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.sdi {
+    width: 100%;
+}

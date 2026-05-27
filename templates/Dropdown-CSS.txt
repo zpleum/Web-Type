@@ -1,0 +1,34 @@
+.dd {
+    position: relative;
+    cursor: default;
+    text-align: center;
+}
+
+.ddc {
+    width: 90%;
+    position: absolute;
+    opacity: 0;
+    background-color: rgba(128, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 20px;
+    gap: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.ddc a {
+    color: white !important;
+}
+
+.dd:hover .ddc {
+    opacity: 1;
+}
+
+.ddc li {
+    padding: 4px;
+}
+
+.ddc li:hover {
+    background-color: rgba(128, 0, 0, 0.8);
+    border-radius: 10px;
+}

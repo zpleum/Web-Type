@@ -5,6 +5,7 @@ import type { Difficulty, Language } from "./lib/types";
 import Navbar, { Page } from "./components/Navbar";
 import HomePage from "./components/HomePage";
 import TestPage from "./components/TestPage";
+import CustomTestPage from "./components/CustomTestPage";
 import LeaderboardPage from "./components/LeaderboardPage";
 import GuidePage from "./components/GuidePage";
 import AboutPage from "./components/AboutPage";
@@ -36,6 +37,11 @@ export default function Home() {
           {page === "test" && (
             <motion.div key="test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <TestPage initLang={initLang} initDiff={initDiff} onNav={setPage} />
+            </motion.div>
+          )}
+          {page === "custom-test" && (
+            <motion.div key="custom-test" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+              <CustomTestPage onNav={setPage} />
             </motion.div>
           )}
           {page === "leaderboard" && (

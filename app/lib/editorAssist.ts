@@ -42,8 +42,10 @@ function insertCloserAt(typed: string, openIndex: number, closer: string, target
 type ResolveResult = { value: string; cursor?: number };
 
 /**
- * Skip typing a closing char that editor assist already inserted (VS Code overtype).
- * Only applies to ", ', ), ], } — never blocks letters (e.g. the two o's in "footer").
+ * VS Code–style overtype for auto-inserted closers.
+ * When assistSuffix is active and the user types its first char at the right spot,
+ * move the cursor past it instead of inserting a duplicate.
+ * Everything else is allowed through — wrong chars show red, user can backspace.
  */
 export function resolveTypingValue(
   prev: string,
@@ -54,34 +56,34 @@ export function resolveTypingValue(
 ): ResolveResult {
   const { index, char: added } = ins;
 
-  // User typed an auto-inserted closer at the position where it was inserted
+  // ── assistSuffix overtype ───────────────────────────────────────────────
+  // e.g. user typed "{" → assistSuffix = "}", cursor inside the pair.
+  // When user now types "}", move the cursor one step past the auto-"}"
+  // instead of inserting a second one.
   if (assistSuffix.length > 0 && added === assistSuffix[0]) {
     const suffixStart = prev.length - assistSuffix.length;
     if (index === suffixStart) {
-      return { value: prev, cursor: prev.length };
+      // Move cursor exactly ONE past this char, not to the absolute end.
+      return { value: prev, cursor: suffixStart + 1 };
     }
   }
 
+  // Non-closers are always allowed.
   if (!CLOSING_CHARS.has(added)) return { value: next };
 
-  // Closing char already sits at the insertion point (e.g. auto ")" then user types ")")
+  // ── Duplicate-closer overtype ───────────────────────────────────────────
+  // The user typed a closer and the very next char in the current string is
+  // the same closer (sitting there from an earlier auto-insert).
+  // If the target expects that closer at `index`, move the cursor past it.
+  // If the target does NOT expect it yet, allow the char anyway — it will
+  // highlight red so the user knows it's wrong, but we never silently drop it.
   if (index < next.length - 1 && next[index + 1] === added) {
-    const nextExpected = target[index];
-    if (nextExpected === added) {
-      return { value: prev, cursor: index + 2 };
+    if (target[index] === added) {
+      // Target wants this closer here — overtype: consume existing, advance cursor.
+      return { value: prev, cursor: index + 1 };
     }
-    if (nextExpected !== added) {
-      return { value: prev };
-    }
-  }
-
-  // Append-at-end duplicate closer (legacy path)
-  if (index === prev.length && prev.length > 0 && prev[prev.length - 1] === added) {
-    const nextExpected = target[prev.length];
-    if (nextExpected !== added) {
-      return { value: prev };
-    }
-    return { value: prev, cursor: prev.length };
+    // Target doesn't want it here yet — let it through (shows red).
+    return { value: next };
   }
 
   return { value: next };
@@ -173,6 +175,24 @@ function applyAutoCloseBrackets(typed: string, target: string, ins?: Insertion):
   return insertCloserAt(typed, openIndex, PAIR_CLOSERS[ch], target);
 }
 
+function applyAutoIndent(typed: string, target: string, ins?: Insertion): string {
+  if (!ins || ins.char !== "\n") return typed;
+  const startOfLineIndex = ins.index + 1;
+  let indent = "";
+  let i = startOfLineIndex;
+  while (i < target.length && (target[i] === " " || target[i] === "\t")) {
+    indent += target[i];
+    i++;
+  }
+  if (indent.length > 0) {
+    const prefixWithIndent = typed.slice(0, startOfLineIndex) + indent;
+    if (target.startsWith(prefixWithIndent)) {
+      return typed.slice(0, startOfLineIndex) + indent + typed.slice(startOfLineIndex);
+    }
+  }
+  return typed;
+}
+
 export function applyEditorAssist(
   typed: string,
   target: string,
@@ -190,6 +210,9 @@ export function applyEditorAssist(
   }
   if (settings.autoCloseBrackets) {
     result = applyAutoCloseBrackets(result, target, ins);
+  }
+  if (settings.autoIndent) {
+    result = applyAutoIndent(result, target, ins);
   }
 
   return result;
@@ -227,9 +250,13 @@ export function processTypingInput(
   val = applyEditorAssist(val, target, settings, lang, ins);
   const suffix = val.slice(beforeAssist.length);
 
-  // Place caret inside auto-inserted pair (e.g. "(|)" or "(|)")
+  // Place caret inside auto-inserted pair (e.g. "(|)") or after auto-indentation on newline
   if (suffix.length > 0 && cursor === undefined) {
-    cursor = ins.index + 1;
+    if (ins.char === "\n") {
+      cursor = ins.index + 1 + (val.length - beforeAssist.length);
+    } else {
+      cursor = ins.index + 1;
+    }
   }
 
   return { value: val, assistSuffix: suffix, cursor };

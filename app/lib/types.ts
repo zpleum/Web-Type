@@ -27,4 +27,7 @@ export interface LeaderboardEntry {
   date: string;
   /** ISO timestamp when the session was saved */
   completedAt?: string;
+  snippetStats?: { wpm: number; acc: number; secs: number }[];
+  isCustom?: boolean;
+  customTitle?: string;
 }
