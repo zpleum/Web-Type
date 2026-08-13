@@ -1,14 +1,17 @@
 "use client";
 import { motion } from "framer-motion";
-import { FiCode } from "react-icons/fi";
+import { FiCode, FiEye, FiEyeOff } from "react-icons/fi";
 import { useRef, useEffect } from "react";
 
 interface Props {
   text: string;
   typed: string;
+  blindLines?: boolean[];
+  onToggleBlindLine?: (lineIndex: number) => void;
+  onSetAllBlind?: (blind: boolean) => void;
 }
 
-export default function SnippetDisplay({ text, typed }: Props) {
+export default function SnippetDisplay({ text, typed, blindLines = [], onToggleBlindLine, onSetAllBlind }: Props) {
   const progress = text.length > 0 ? Math.round((typed.length / text.length) * 100) : 0;
 
   // Build per-line data with global character indices
@@ -67,8 +70,9 @@ export default function SnippetDisplay({ text, typed }: Props) {
   }, [typed.length, activeLineIdx]);
 
   /** Render a single visible character at global index `idx`. */
-  const renderChar = (char: string, idx: number) => {
+  const renderChar = (char: string, idx: number, isBlindLine: boolean) => {
     const ch = char === " " ? "\u00A0" : char;
+
     if (idx < typed.length) {
       const correct = typed[idx] === char;
       return (
@@ -87,6 +91,18 @@ export default function SnippetDisplay({ text, typed }: Props) {
         </motion.span>
       );
     }
+
+    if (isBlindLine) {
+      return (
+        <span
+          key={idx}
+          className="inline-block rounded-[2px] bg-surface-2/90 text-transparent shadow-inner shadow-black/10"
+        >
+          {ch}
+        </span>
+      );
+    }
+
     if (idx === typed.length) {
       return (
         <span key={idx} ref={activeCharRef} className="cursor-blink text-muted">
@@ -108,8 +124,15 @@ export default function SnippetDisplay({ text, typed }: Props) {
    * – typed incorrectly → red ↵
    * – future → nothing
    */
-  const renderNewlineIndicator = (nlIdx: number, isLastLine: boolean) => {
+  const renderNewlineIndicator = (nlIdx: number, isLastLine: boolean, isBlindLine: boolean) => {
     if (isLastLine) return null;
+    if (isBlindLine) {
+      return (
+        <span className="inline-block rounded-[2px] bg-surface-2/90 text-transparent text-[10px] align-middle ml-0.5">
+          ↵
+        </span>
+      );
+    }
     if (nlIdx < typed.length) {
       if (typed[nlIdx] === "\n") return null; // correct → invisible
       return (
@@ -141,28 +164,45 @@ export default function SnippetDisplay({ text, typed }: Props) {
             Target snippet
           </span>
         </div>
-        <span className="text-[10px] font-medium text-muted tabular-nums">{progress}%</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            title={blindLines.some(Boolean) ? "Show all lines" : "Blind all lines"}
+            onClick={() => onSetAllBlind?.(!blindLines.some(Boolean))}
+            className="rounded-md border border-border bg-surface-2 p-1.5 text-muted hover:bg-surface-3 transition-colors"
+          >
+            {blindLines.some(Boolean) ? <FiEye className="w-3.5 h-3.5" /> : <FiEyeOff className="w-3.5 h-3.5" />}
+          </button>
+          <span className="text-[10px] font-medium text-muted tabular-nums">{progress}%</span>
+        </div>
       </div>
 
       {/* Code body — gutter + content side-by-side */}
       <div className="flex font-mono text-[13px] sm:text-[14px] leading-relaxed tracking-wide select-none min-h-[80px]">
 
         {/* ── Line-number gutter (VS Code style) ── */}
-        <div className="flex-none border-r border-border/40 bg-[var(--code-header)]/40 py-4 pl-3 pr-3 text-right">
+        <div className="flex-none border-r border-border/40 bg-[var(--code-header)]/40 py-4 pl-3 pr-3">
           {lines.map((line, i) => {
-            // Highlight the line number where the cursor currently sits
             const isActive =
               typed.length >= line.start && typed.length <= line.newlineIdx;
+            const isBlindLine = blindLines[i] ?? false;
             return (
               <div
                 key={i}
-                className={`leading-relaxed text-[13px] sm:text-[14px] tabular-nums transition-colors duration-150 ${
-                  isActive
-                    ? "text-foreground/80 font-semibold"
-                    : "text-muted/40"
-                }`}
+                className="flex items-center justify-end gap-2 leading-relaxed text-[13px] sm:text-[14px] tabular-nums transition-colors duration-150"
               >
-                {i + 1}
+                <button
+                  type="button"
+                  title={isBlindLine ? `Show line ${i + 1}` : `Blind line ${i + 1}`}
+                  onClick={() => onToggleBlindLine?.(i)}
+                  className="shrink-0 p-0 text-muted/70 hover:text-foreground transition-colors"
+                  aria-label={isBlindLine ? `Reveal line ${i + 1}` : `Blind line ${i + 1}`}
+                >
+                  {isBlindLine ? <FiEye className="w-3 h-3" /> : <FiEyeOff className="w-3 h-3" />}
+                </button>
+                <span className={isActive ? "text-foreground/80 font-semibold" : "text-muted/40"}>
+                  {i + 1}
+                </span>
               </div>
             );
           })}
@@ -170,16 +210,17 @@ export default function SnippetDisplay({ text, typed }: Props) {
 
         {/* ── Code content ── */}
         <div ref={scrollContainerRef} className="flex-1 min-w-0 overflow-x-auto py-4 px-4">
-          {lines.map((line, lineIdx) => (
-            <div key={lineIdx} className="leading-relaxed whitespace-pre">
-              {/* Characters on this line */}
-              {line.content.split("").map((char, charIdx) =>
-                renderChar(char, line.start + charIdx)
-              )}
-              {/* ↵ indicator at end of line (not shown for last line) */}
-              {renderNewlineIndicator(line.newlineIdx, lineIdx === lines.length - 1)}
-            </div>
-          ))}
+          {lines.map((line, lineIdx) => {
+            const isBlindLine = blindLines[lineIdx] ?? false;
+            return (
+              <div key={lineIdx} className="leading-relaxed whitespace-pre">
+                {line.content.split("").map((char, charIdx) =>
+                  renderChar(char, line.start + charIdx, isBlindLine)
+                )}
+                {renderNewlineIndicator(line.newlineIdx, lineIdx === lines.length - 1, isBlindLine)}
+              </div>
+            );
+          })}
         </div>
 
       </div>

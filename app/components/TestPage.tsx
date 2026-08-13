@@ -94,6 +94,7 @@ export default function TestPage({
   const [sessionDone, setSessionDone] = useState(false);
   const [waitingForNext, setWaitingForNext] = useState(false);
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(() => loadEditorSettings());
+  const [blindLines, setBlindLines] = useState<boolean[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startRef = useRef<number>(0);
@@ -104,6 +105,37 @@ export default function TestPage({
   const currentText = snippets[idx] ?? "";
   const stats = calcStats(typed, currentText, elapsed);
   const errorCount = [...typed].filter((c, i) => c !== currentText[i]).length;
+
+  useEffect(() => {
+    const totalLines = currentText.split("\n").length || 0;
+    if (totalLines === 0) {
+      setBlindLines([]);
+      return;
+    }
+
+    setBlindLines((prev) => {
+      const next = Array.from({ length: totalLines }, (_, lineIndex) => {
+        if (lineIndex < prev.length) return prev[lineIndex];
+        return editorSettings.blindLinesDefault;
+      });
+      return next;
+    });
+  }, [currentText, editorSettings.blindLinesDefault]);
+
+  const setAllBlindLines = useCallback((blind: boolean) => {
+    const totalLines = currentText.split("\n").length || 0;
+    setBlindLines(Array.from({ length: totalLines }, () => blind));
+  }, [currentText]);
+
+  const toggleBlindLine = useCallback((lineIndex: number) => {
+    setBlindLines((prev) => {
+      const next = [...prev];
+      const totalLines = currentText.split("\n").length || 0;
+      while (next.length < totalLines) next.push(editorSettings.blindLinesDefault);
+      next[lineIndex] = !next[lineIndex];
+      return next;
+    });
+  }, [currentText, editorSettings.blindLinesDefault]);
 
   const focusInput = useCallback(() => {
     setTimeout(() => {
@@ -420,7 +452,30 @@ export default function TestPage({
               />
             </div>
 
-            <SnippetDisplay text={currentText} typed={typed} />
+            <div className="flex items-center justify-end gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setAllBlindLines(true)}
+                className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:bg-surface-3 transition-colors"
+              >
+                Blind all
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllBlindLines(false)}
+                className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-medium text-muted hover:bg-surface-3 transition-colors"
+              >
+                Show all
+              </button>
+            </div>
+
+            <SnippetDisplay
+              text={currentText}
+              typed={typed}
+              blindLines={blindLines}
+              onToggleBlindLine={toggleBlindLine}
+              onSetAllBlind={setAllBlindLines}
+            />
 
             <textarea
               ref={inputRef}

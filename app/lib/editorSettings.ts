@@ -3,6 +3,7 @@ export interface EditorSettings {
   autoCloseQuotes: boolean;
   autoCloseBrackets: boolean;
   autoIndent: boolean;
+  blindLinesDefault: boolean;
 }
 
 export const EDITOR_SETTINGS_KEY = "webtype-editor-settings";
@@ -12,6 +13,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   autoCloseQuotes: true,
   autoCloseBrackets: true,
   autoIndent: true,
+  blindLinesDefault: false,
 };
 
 export function loadEditorSettings(): EditorSettings {
@@ -25,6 +27,7 @@ export function loadEditorSettings(): EditorSettings {
       autoCloseQuotes: parsed.autoCloseQuotes ?? DEFAULT_EDITOR_SETTINGS.autoCloseQuotes,
       autoCloseBrackets: parsed.autoCloseBrackets ?? DEFAULT_EDITOR_SETTINGS.autoCloseBrackets,
       autoIndent: parsed.autoIndent ?? DEFAULT_EDITOR_SETTINGS.autoIndent,
+      blindLinesDefault: parsed.blindLinesDefault ?? DEFAULT_EDITOR_SETTINGS.blindLinesDefault,
     };
   } catch {
     return { ...DEFAULT_EDITOR_SETTINGS };

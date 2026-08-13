@@ -36,6 +36,7 @@ export default function CustomTestPage({ onNav }: { onNav: (p: Page) => void }) 
   const [done, setDone] = useState(false);
   const [sessionStats, setSessionStats] = useState<{ wpm: number; acc: number; secs: number } | null>(null);
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(() => loadEditorSettings());
+  const [blindLines, setBlindLines] = useState<boolean[]>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startRef = useRef<number>(0);
@@ -46,6 +47,37 @@ export default function CustomTestPage({ onNav }: { onNav: (p: Page) => void }) 
   const stats = calcStats(typed, fullText, elapsed);
   const errorCount = [...typed].filter((c, i) => c !== fullText[i]).length;
   const computedLang = detectLanguage(customText, selectedTemplate?.id);
+
+  useEffect(() => {
+    const totalLines = fullText.split("\n").length || 0;
+    if (totalLines === 0) {
+      setBlindLines([]);
+      return;
+    }
+
+    setBlindLines((prev) => {
+      const next = Array.from({ length: totalLines }, (_, lineIndex) => {
+        if (lineIndex < prev.length) return prev[lineIndex];
+        return editorSettings.blindLinesDefault;
+      });
+      return next;
+    });
+  }, [fullText, editorSettings.blindLinesDefault]);
+
+  const setAllBlindLines = useCallback((blind: boolean) => {
+    const totalLines = fullText.split("\n").length || 0;
+    setBlindLines(Array.from({ length: totalLines }, () => blind));
+  }, [fullText]);
+
+  const toggleBlindLine = useCallback((lineIndex: number) => {
+    setBlindLines((prev) => {
+      const next = [...prev];
+      const totalLines = fullText.split("\n").length || 0;
+      while (next.length < totalLines) next.push(editorSettings.blindLinesDefault);
+      next[lineIndex] = !next[lineIndex];
+      return next;
+    });
+  }, [fullText, editorSettings.blindLinesDefault]);
 
   const focusInput = useCallback(() => {
     setTimeout(() => {
@@ -380,7 +412,13 @@ export default function CustomTestPage({ onNav }: { onNav: (p: Page) => void }) 
                     />
                   </div>
 
-                  <SnippetDisplay text={fullText} typed={typed} />
+                  <SnippetDisplay
+                    text={fullText}
+                    typed={typed}
+                    blindLines={blindLines}
+                    onToggleBlindLine={toggleBlindLine}
+                    onSetAllBlind={setAllBlindLines}
+                  />
 
                   <textarea
                     ref={inputRef}

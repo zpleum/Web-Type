@@ -29,6 +29,11 @@ const OPTIONS: { key: SettingKey; label: string; hint: string; htmlOnly?: boolea
     label: "Auto-indent",
     hint: "Automatically inserts matching indentation when starting a new line.",
   },
+  {
+    key: "blindLinesDefault",
+    label: "Blind all lines by default",
+    hint: "New snippets start with every line hidden until you reveal them manually.",
+  },
 ];
 
 export default function EditorAssistSettings({
